@@ -141,6 +141,7 @@ export const injectGoogleReCaptchaScript = ({
   onLoadCallbackName,
   language,
   onLoad,
+  onError,
   useRecaptchaNet,
   useEnterprise,
   scriptProps: {
@@ -150,6 +151,7 @@ export const injectGoogleReCaptchaScript = ({
     id = '',
     appendTo
   } = {}
+  
 }: IInjectGoogleReCaptchaScriptParams) => {
   const scriptId = id || 'google-recaptcha-v3';
 
@@ -180,6 +182,7 @@ export const injectGoogleReCaptchaScript = ({
   js.defer = !!defer;
   js.async = !!async;
   js.onload = onLoad;
+  js.onerror = onError;
 
   /**
    * Append it to the body // head
