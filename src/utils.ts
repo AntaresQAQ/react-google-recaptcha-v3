@@ -96,7 +96,10 @@ export const cleanBadge = (container?: HTMLElement | string) => {
     return;
   }
 
-  const customBadge = typeof container === 'string' ? document.getElementById(container) : container;
+  const customBadge =
+    typeof container === 'string'
+      ? document.getElementById(container)
+      : container;
 
   cleanCustomBadge(customBadge);
 };
@@ -107,7 +110,10 @@ export const cleanBadge = (container?: HTMLElement | string) => {
  * @param scriptId
  * @param container
  */
-export const cleanGoogleRecaptcha = (scriptId: string, container?: HTMLElement | string) => {
+export const cleanGoogleRecaptcha = (
+  scriptId: string,
+  container?: HTMLElement | string
+) => {
   // remove badge
   cleanBadge(container);
 
@@ -165,9 +171,7 @@ export const injectGoogleReCaptchaScript = ({
   js.id = scriptId;
   js.src = `${googleRecaptchaSrc}?render=${render}${
     render === 'explicit' ? `&onload=${onLoadCallbackName}` : ''
-  }${
-    language ? `&hl=${language}` : ''
-  }`;
+  }${language ? `&hl=${language}` : ''}`;
 
   if (!!nonce) {
     js.nonce = nonce;
@@ -196,7 +200,9 @@ export const injectGoogleReCaptchaScript = ({
  */
 export const logWarningMessage = (message: string) => {
   const isDevelopmentMode =
-    typeof process !== 'undefined' && !!process.env && process.env.NODE_ENV !== 'production';
+    typeof process !== 'undefined' &&
+    !!process.env &&
+    process.env.NODE_ENV !== 'production';
 
   if (isDevelopmentMode) {
     return;
@@ -204,3 +210,16 @@ export const logWarningMessage = (message: string) => {
 
   console.warn(message);
 };
+
+export function promiseWithResolvers<T = unknown>() {
+  let resolve: (value: T | PromiseLike<T>) => void;
+  let reject: (reason?: any) => void;
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  // @ts-ignore
+  return { promise, resolve, reject };
+}

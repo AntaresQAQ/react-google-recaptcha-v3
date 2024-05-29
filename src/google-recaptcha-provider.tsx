@@ -4,13 +4,13 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
-  useState
+  useRef
 } from 'react';
 import {
   cleanGoogleRecaptcha,
   injectGoogleReCaptchaScript,
-  logWarningMessage
+  logWarningMessage,
+  promiseWithResolvers
 } from './utils';
 
 enum GoogleRecaptchaError {
@@ -39,7 +39,7 @@ interface IGoogleReCaptchaProviderProps {
       callback?: () => void;
       expiredCallback?: () => void;
       errorCallback?: () => void;
-    }
+    };
   };
   children: ReactNode;
 }
@@ -69,9 +69,11 @@ export function GoogleReCaptchaProvider({
   container,
   children
 }: IGoogleReCaptchaProviderProps) {
-  const [greCaptchaInstance, setGreCaptchaInstance] = useState<null | {
-    execute: Function;
-  }>(null);
+  const greCaptchaInstancePromiseRef = useRef(
+    promiseWithResolvers<null | {
+      execute: (...args: any[]) => Promise<any>;
+    }>()
+  );
   const clientId = useRef<number | string>(reCaptchaKey);
 
   const scriptPropsJson = JSON.stringify(scriptProps);
@@ -82,33 +84,37 @@ export function GoogleReCaptchaProvider({
       logWarningMessage(
         '<GoogleReCaptchaProvider /> recaptcha key not provided'
       );
+      greCaptchaInstancePromiseRef.current.resolve(null);
 
       return;
     }
 
     const scriptId = scriptProps?.id || 'google-recaptcha-v3';
-    const onLoadCallbackName = scriptProps?.onLoadCallbackName || 'onRecaptchaLoadCallback';
+    const onLoadCallbackName =
+      scriptProps?.onLoadCallbackName || 'onRecaptchaLoadCallback';
 
-    ((window as unknown) as {[key: string]: () => void})[onLoadCallbackName] = () => {
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      const grecaptcha = useEnterprise
-        ? (window as any).grecaptcha.enterprise
-        : (window as any).grecaptcha;
+    (window as unknown as { [key: string]: () => void })[onLoadCallbackName] =
+      () => {
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        const grecaptcha = useEnterprise
+          ? (window as any).grecaptcha.enterprise
+          : (window as any).grecaptcha;
 
-      const params = {
-        badge: 'inline',
-        size: 'invisible',
-        sitekey: reCaptchaKey,
-        ...(container?.parameters || {})
+        const params = {
+          badge: 'inline',
+          size: 'invisible',
+          sitekey: reCaptchaKey,
+          ...(container?.parameters || {})
+        };
+        clientId.current = grecaptcha.render(container?.element, params);
       };
-      clientId.current = grecaptcha.render(container?.element, params);
-    };
 
     const onLoad = () => {
       if (!window || !(window as any).grecaptcha) {
         logWarningMessage(
           `<GoogleRecaptchaProvider /> ${GoogleRecaptchaError.SCRIPT_NOT_AVAILABLE}`
         );
+        greCaptchaInstancePromiseRef.current.resolve(null);
 
         return;
       }
@@ -118,12 +124,13 @@ export function GoogleReCaptchaProvider({
         : (window as any).grecaptcha;
 
       grecaptcha.ready(() => {
-        setGreCaptchaInstance(grecaptcha);
+        greCaptchaInstancePromiseRef.current.resolve(grecaptcha);
       });
     };
 
     const onError = () => {
       logWarningMessage('Error loading google recaptcha script');
+      greCaptchaInstancePromiseRef.current.resolve(null);
     };
 
     injectGoogleReCaptchaScript({
@@ -147,28 +154,28 @@ export function GoogleReCaptchaProvider({
     parametersJson,
     language,
     reCaptchaKey,
-    container?.element,
+    container?.element
   ]);
 
-  const executeRecaptcha = useCallback(
-    (action?: string) => {
-      if (!greCaptchaInstance || !greCaptchaInstance.execute) {
-        throw new Error(
-          '<GoogleReCaptchaProvider /> Google Recaptcha has not been loaded'
-        );
-      }
+  const executeRecaptcha = useCallback(async (action?: string) => {
+    const greCaptchaInstance = await greCaptchaInstancePromiseRef.current
+      .promise;
 
-      return greCaptchaInstance.execute(clientId.current, { action });
-    },
-    [greCaptchaInstance, clientId]
-  );
+    if (!greCaptchaInstance || !greCaptchaInstance.execute) {
+      throw new Error(
+        '<GoogleReCaptchaProvider /> Google Recaptcha has not been loaded'
+      );
+    }
+
+    return await greCaptchaInstance.execute(clientId.current, { action });
+  }, []);
 
   const googleReCaptchaContextValue = useMemo(
     () => ({
-      executeRecaptcha: greCaptchaInstance ? executeRecaptcha : undefined,
-      container: container?.element,
+      executeRecaptcha,
+      container: container?.element
     }),
-    [executeRecaptcha, greCaptchaInstance, container?.element]
+    [executeRecaptcha, container?.element]
   );
 
   return (

@@ -1,6 +1,6 @@
 {
-  "name": "react-google-recaptcha-v3",
-  "version": "1.10.1",
+  "name": "safe-react-google-recaptcha-v3",
+  "version": "1.11.0",
   "description": "React component for google-recaptcha v3",
   "module": "dist/react-google-recaptcha-v3.esm.js",
   "main": "dist/react-google-recaptcha-v3.cjs.js",
@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/t49tran/react-google-recaptcha-v3"
+    "url": "https://github.com/AntaresQAQ/react-google-recaptcha-v3"
   },
   "peerDependencies": {
     "react": "^16.3 || ^17.0 || ^18.0",
